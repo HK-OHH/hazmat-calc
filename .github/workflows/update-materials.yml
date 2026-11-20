@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: 국가위험물정보 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
