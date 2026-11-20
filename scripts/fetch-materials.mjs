@@ -1,5 +1,6 @@
 // 소방청_국가 위험물 정보 조회 서비스 → data/materials.json
 // 실행: DATA_GO_KR_KEY=인증키 node scripts/fetch-materials.mjs
+// 데이터 출처: 소방청_국가 위험물 정보 조회 서비스 (공공데이터포털, 공공누리)
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 
 const KEY = process.env.DATA_GO_KR_KEY;
