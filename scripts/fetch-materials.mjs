@@ -35,10 +35,15 @@ async function page(no) {
   }
 }
 
-const first = await page(1);
+let first;
+try { first = await page(1); }
+catch (e) { fail(`API 호출 실패: ${e.message}${e.cause ? ' / 원인: ' + (e.cause.code || e.cause.message) : ''}`); }
 let all = first.items;
 const pages = Math.ceil(first.total / ROWS);
-for (let p = 2; p <= pages; p++) all = all.concat((await page(p)).items);
+for (let p = 2; p <= pages; p++) {
+  try { all = all.concat((await page(p)).items); }
+  catch (e) { fail(`${p}페이지 호출 실패: ${e.message}`); }
+}
 console.log(`수집 ${all.length} / 전체 ${first.total}`);
 
 // 비정상 응답으로 기존 데이터를 덮어쓰지 않도록 안전장치
