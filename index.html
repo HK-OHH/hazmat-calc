@@ -885,7 +885,7 @@ $('#presetQ').oninput=renderPresets;
 
 // ───────── 국가위험물정보 DB 검색 ─────────
 // GitHub Pages에서는 같은 폴더의 data/materials.json, 로컬 파일로 열면 아래 원격 주소에서 불러옴
-const DB_REMOTE = '';   // 예: 'https://아이디.github.io/hazmat-calc/data/materials.json'
+const DB_REMOTE = 'https://hk-ohh.github.io/hazmat-calc/data/materials.json';   // 로컬 파일로 열었을 때 사용
 let DB=null, dbLoading=null;
 function loadDB(){
   if(DB) return Promise.resolve(DB);
