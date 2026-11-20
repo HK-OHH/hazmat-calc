@@ -20,7 +20,19 @@ async function page(no) {
     try {
       const res = await fetch(url, { headers: { Accept: 'application/xml' }, signal: AbortSignal.timeout(60000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const xml = await res.text();
+      const text = (await res.text()).trim();
+      // 응답이 JSON 또는 XML 둘 다 올 수 있음
+      if (text.startsWith('{')) {
+        const j = JSON.parse(text);
+        const code = String(j?.header?.resultCode ?? j?.response?.header?.resultCode ?? '');
+        if (code !== '0' && code !== '00') throw new Error(`API 오류 ${code} ${j?.header?.resultMsg || text.slice(0, 200)}`);
+        const body = j.body || j.response?.body || {};
+        let raw = body.items?.item ?? body.items ?? [];
+        if (!Array.isArray(raw)) raw = [raw];
+        const items = raw.map(i => ({ name: String(i.chemicalname ?? '').trim(), cas: String(i.casno ?? '').trim(), un: String(i.unno ?? '').trim(), cls: String(i.hazardmaterialclass ?? '').trim() }));
+        return { total: +body.totalCount || 0, items };
+      }
+      const xml = text;
       const code = tag(xml, 'resultCode');
       if (code !== '0' && code !== '00') throw new Error(`API 오류 ${code} ${tag(xml, 'resultMsg') || xml.slice(0, 200)}`);
       const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => ({
