@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>위험물 지정수량 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#1d232b; --sub:#5d6773; --line:#dde1e6;
+  --accent:#c8321e; --accent-soft:#fbeae7; --ok:#1f7a4d; --ok-soft:#e6f4ec;
+  --warn:#a86400; --warn-soft:#fdf1dc; --bad:#b3261e; --bad-soft:#fbe4e2;
+  --blue:#1f5fa8; --blue-soft:#e7effa;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:14px;line-height:1.5}
+header{background:#1d232b;color:#fff;padding:18px 20px 14px}
+header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.3px}
+header h1 span{color:#ff8a73}
+header p{margin:4px 0 0;color:#b9c1cb;font-size:12.5px}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:16px;display:flex;align-items:center;gap:8px}
+.card h2 .no{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.drop{border:2px dashed #b9c1cb;border-radius:10px;padding:22px;text-align:center;color:var(--sub);cursor:pointer;transition:.15s;background:#fafbfc}
+.drop.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.drop b{color:var(--ink)}
+.muted{color:var(--sub);font-size:12.5px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub)}
+input,select,textarea{font:inherit;color:var(--ink);border:1px solid #c5ccd4;border-radius:6px;padding:6px 8px;background:#fff;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid #ffb4a6;border-color:var(--accent)}
+textarea{width:100%;min-height:90px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.row > *{flex:1 1 120px}
+.row .narrow{flex:0 1 90px}
+.btn{font:inherit;border:1px solid #c5ccd4;background:#fff;border-radius:6px;padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f0f2f4}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.pri:hover{background:#a9281a}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--sub)}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:999px;font-weight:500;white-space:nowrap}
+.tag.high{background:var(--ok-soft);color:var(--ok)}
+.tag.mid{background:var(--warn-soft);color:var(--warn)}
+.tag.low{background:var(--bad-soft);color:var(--bad)}
+.tag.none{background:#eceff2;color:var(--sub)}
+.tag.blue{background:var(--blue-soft);color:var(--blue)}
+.pcard{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:10px;background:#fcfcfd}
+.pcard .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.pcard .title{font-weight:700;font-size:14.5px}
+.pcard .result{margin:6px 0;font-size:15px;font-weight:700;color:var(--accent)}
+.pcard .result.nh{color:var(--ok)}
+.ev{font-size:12px;background:#f1f3f5;border-radius:6px;padding:6px 8px;color:#39424c;word-break:break-all;margin:6px 0}
+.warns{margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--warn)}
+.warns li{margin:1px 0}
+.dbres{max-height:260px;overflow:auto;margin-top:6px;border-radius:8px}
+.dbres:empty{display:none}
+.dbres .it{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:6px;margin-bottom:4px;cursor:pointer;background:#fff}
+.dbres .it:hover{border-color:var(--accent);background:var(--accent-soft)}
+.dbres .it .nm{font-weight:500}
+.dbres .it .cs{font-size:11.5px;color:var(--sub)}
+.dbres .it .cl{font-size:12px;text-align:right;white-space:nowrap}
+.dbres .it.nh .cl{color:var(--ok)}
+.dbres .more{font-size:12px;color:var(--sub);padding:4px 2px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;cursor:pointer}
+.presets button:hover{border-color:var(--accent);color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:middle}
+th{background:#f6f7f9;font-weight:500;color:var(--sub);font-size:12px;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td input{width:72px;padding:3px 5px}
+td select{padding:3px 4px}
+.tblwrap{overflow-x:auto}
+.locsum{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.locsum .hd{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+.locsum .hd b{font-size:15px}
+.big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.gauge{position:relative;height:14px;background:#eceff2;border-radius:7px;margin:10px 0 18px;overflow:visible}
+.gauge .fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px;transition:width .3s}
+.gauge .mk{position:absolute;top:-3px;bottom:-3px;width:2px;background:#39424c}
+.gauge .mk span{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--sub);white-space:nowrap}
+.status{font-weight:700}
+.status.s0{color:var(--ok)} .status.s1{color:var(--warn)} .status.s2{color:var(--bad)}
+details summary{cursor:pointer;font-weight:500}
+.law td,.law th{font-size:12.5px;padding:4px 6px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1d232b;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
+.toast.on{opacity:1}
+.empty{color:var(--sub);text-align:center;padding:18px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #ccc;border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.foot{font-size:12px;color:var(--sub);line-height:1.6}
+/* ───── 인쇄 보고서 ───── */
+#report{display:none}
+@page{size:A4 landscape;margin:10mm}
+@media print{
+  body{background:#fff;font-size:10.5pt}
+  header,main{display:none!important}
+  #report{display:block}
+  .toast{display:none}
+}
+#report{color:#000;font-family:'Noto Sans KR',sans-serif}
+#report h1{font-size:17pt;margin:0 0 2px;text-align:center;letter-spacing:2px}
+#report .meta{display:flex;justify-content:space-between;font-size:9.5pt;margin:6px 0 8px;border-bottom:2px solid #000;padding-bottom:4px}
+#report h2{font-size:11.5pt;margin:12px 0 4px}
+#report table{width:100%;border-collapse:collapse;font-size:9.5pt;page-break-inside:auto}
+#report tr{page-break-inside:avoid}
+#report th,#report td{border:1px solid #444;padding:4px 5px;vertical-align:middle}
+#report th{background:#e9ecef;font-weight:700;text-align:center;color:#000;font-size:9pt}
+#report td.c{text-align:center}
+#report td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#report .calc{font-size:8.5pt;color:#333;display:block}
+#report tr.sum td{background:#fff4e5;font-weight:700}
+#report .verdict{margin-top:6px;border:2px solid #000;padding:7px 10px;font-size:10.5pt;line-height:1.6}
+#report .verdict b.big2{font-size:13pt}
+#report .notes{font-size:8.5pt;color:#333;margin-top:8px;line-height:1.5}
+#report .sign{display:flex;justify-content:flex-end;gap:0;margin-top:10px}
+#report .sign div{border:1px solid #444;width:90px;text-align:center;font-size:9pt}
+#report .sign div span{display:block;border-bottom:1px solid #444;background:#e9ecef;padding:2px}
+#report .sign div i{display:block;height:42px}
+</style>
+</head>
+<body>
+<header>
+  <h1>위험물 <span>지정수량</span> 계산기</h1>
+  <p>MSDS를 올리면 유별·품명을 자동으로 판정하고, 수량을 넣으면 지정수량 배수를 합산합니다 · 기준: 위험물안전관리법 시행령 [별표 1]</p>
+</header>
+<main>
+
+<div class="grid2 noprint">
+  <!-- 1. MSDS 업로드 -->
+  <section class="card">
+    <h2><span class="no">1</span>MSDS로 자동 판정</h2>
+    <div class="drop" id="drop">
+      <b>MSDS 파일을 여기에 끌어다 놓거나 클릭</b><br>
+      <span class="muted">PDF·TXT · 여러 개 동시 가능 · 파일은 이 브라우저 안에서만 읽고 어디에도 전송하지 않음</span>
+    </div>
+    <input type="file" id="file" accept=".pdf,.txt,application/pdf,text/plain" multiple hidden>
+    <details style="margin-top:10px">
+      <summary class="muted">스캔본이라 글자가 안 읽히면: MSDS 15번 항목 내용을 직접 붙여넣기</summary>
+      <textarea id="paste" placeholder="예) 다. 위험물안전관리법 규제 현황 : 제4류 제2석유류(비수용성액체) 1,000L"></textarea>
+      <div class="row" style="margin-top:6px"><input id="pasteName" placeholder="제품명 (선택)"><button class="btn" id="pasteBtn" style="flex:0 0 auto">판정하기</button></div>
+    </details>
+    <div id="parsed"></div>
+  </section>
+
+  <!-- 2. 직접 선택 -->
+  <section class="card">
+    <h2><span class="no">2</span>물질 검색 · 유별 직접 선택</h2>
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+      <div class="muted">물질명·CAS 번호로 찾기 — 소방청 국가위험물정보 <span id="dbInfo">(검색 시 불러옴)</span></div>
+      <input id="dbQ" placeholder="예: 경유, 톨루엔, 67-64-1" style="width:100%;margin-top:6px" autocomplete="off">
+      <div id="dbRes" class="dbres"></div>
+    </div>
+    <div id="manualPicker"></div>
+    <div class="row" style="margin-top:8px" id="manualQty"></div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="btn pri" id="manualAdd">목록에 추가</button></div>
+    <div style="margin-top:12px">
+      <div class="muted">현장에서 자주 쓰는 물질 (일반적 분류 · 혼합물은 반드시 제품 MSDS로 확인)</div>
+      <input id="presetQ" placeholder="물질명 검색 (예: 경유, 신너, 아세톤)" style="width:100%;margin-top:6px">
+      <div class="presets" id="presets"></div>
+    </div>
+  </section>
+</div>
+
+<!-- 3. 계산 결과 -->
+<section class="card">
+  <h2><span class="no">3</span>지정수량 배수 계산
+    <span style="flex:1"></span>
+    <label class="muted noprint" style="font-weight:400">관리 목표
+      <select id="target">
+        <option value="1">지정수량 미만 (1배 미만)</option>
+        <option value="0.2">소량위험물 미만 (0.2배 미만)</option>
+      </select>
+    </label>
+  </h2>
+  <div class="row noprint" style="margin-bottom:10px">
+    <label class="f" style="flex:2 1 220px">현장명 (인쇄용)<input id="siteName" placeholder="예: 고양창릉 S-1BL 공동주택 신축공사"></label>
+    <label class="f" style="flex:1 1 140px">작성자 (인쇄용)<input id="writer" placeholder="예: 소방안전관리자 ○○○"></label>
+  </div>
+  <div id="summary"></div>
+  <div class="tblwrap">
+    <table id="tbl">
+      <thead><tr>
+        <th>저장장소</th><th>제품/물질명</th><th>유별 · 품명</th><th class="num">지정수량</th>
+        <th class="num">1개 용량</th><th class="num">개수</th><th>단위</th><th class="num">비중</th>
+        <th class="num">환산량</th><th class="num">배수</th><th class="num">추가 가능량</th><th>판정근거</th><th class="noprint"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;justify-content:flex-end">
+    <button class="btn" id="copyBtn">표 복사 (엑셀 붙여넣기용)</button>
+    <button class="btn" id="csvBtn">CSV 저장</button>
+    <button class="btn" id="printBtn">인쇄</button>
+    <button class="btn ghost" id="clearBtn">전체 삭제</button>
+  </div>
+</section>
+
+<section class="card">
+  <details>
+    <summary>위험물안전관리법 시행령 [별표 1] 지정수량 표 · 판정 기준</summary>
+    <div id="lawTable" style="margin-top:10px"></div>
+    <div class="foot" style="margin-top:10px">
+      · 제4류 품명 구분(1기압 기준 인화점): 특수인화물 – 발화점 100℃ 이하 또는 인화점 -20℃ 이하·비점 40℃ 이하 / 제1석유류 – 21℃ 미만 / 제2석유류 – 21℃ 이상 70℃ 미만 / 제3석유류 – 70℃ 이상 200℃ 미만 / 제4석유류 – 200℃ 이상 250℃ 미만 / 동식물유류 – 동식물 추출 기름, 인화점 250℃ 미만<br>
+      · 알코올류: 탄소 1~3개 포화1가 알코올 (60중량% 미만 수용액 제외). 제2·3·4석유류는 도료류 등 가연성액체량이 40중량% 이하인 것 일부 제외 규정 있음.<br>
+      · 제5류는 위험성 시험 결과에 따라 제1종 10kg / 제2종 100kg. 시험 결과를 모르면 제1종(10kg)으로 보수적으로 계산합니다.<br>
+      · 제6류: 과산화수소는 농도 36중량% 이상, 질산은 비중 1.49 이상만 해당.<br>
+      · 둘 이상의 품명을 같은 장소에서 저장·취급하면 각 수량을 지정수량으로 나눈 값을 합산하여 1 이상이면 지정수량 이상으로 봅니다(위험물안전관리법 제5조).<br>
+      · 지정수량 1/5 이상 ~ 지정수량 미만은 소량위험물로 시·도 조례의 저장·취급 기준이 적용됩니다.<br>
+      · 이 도구의 자동 판정은 참고용입니다. 최종 판정은 제품 MSDS 원문과 관할 소방서 확인을 따르십시오.
+    </div>
+  </details>
+</section>
+
+</main>
+<div id="report"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/*ENGINE-START*/
+// ───────── 위험물안전관리법 시행령 [별표 1] ─────────
+// q: 지정수량(숫자) 또는 opts: [[구분명, 지정수량], ...]
+// a: MSDS 15항 문구 매칭용 별칭(공백 제거한 텍스트에 대한 정규식). 구 명칭 포함.
+const KIND5 = [['제1종',10],['제2종',100]];
+const TABLE = {
+  1:{name:'제1류',prop:'산화성고체',unit:'kg',items:[
+    {n:'아염소산염류',q:50,a:['아염소산염']},
+    {n:'염소산염류',q:50,a:['(?<![아과])염소산염']},
+    {n:'과염소산염류',q:50,a:['과염소산염']},
+    {n:'무기과산화물',q:50,a:['무기과산화물','과산화나트륨','과산화칼륨','과산화칼슘','과산화바륨']},
+    {n:'브로민산염류',q:300,a:['브로민산염','브롬산염']},
+    {n:'질산염류',q:300,a:['(?<!아)질산염','질산칼륨','질산나트륨','질산암모늄']},
+    {n:'아이오딘산염류',q:300,a:['(?<!과)아이오딘산염','(?<!과)요오드산염']},
+    {n:'과망가니즈산염류',q:1000,a:['과망가니즈산염','과망간산염','과망간산칼륨']},
+    {n:'다이크로뮴산염류',q:1000,a:['다이크로뮴산염','중크롬산염','디크롬산염','다이크롬산염','중크롬산칼륨']},
+    {n:'그 밖에 행정안전부령으로 정하는 것',opts:[['50kg',50],['300kg',300],['1,000kg',1000]],a:['과아이오딘산','과요오드산','아질산염','차아염소산염','염소화(아이|이)소시아(누르|눌)산','퍼옥소이황산염','퍼옥소붕산염','크로뮴.{0,4}산화물','크롬.{0,4}산화물','크롬,?납','아이오딘의산화물']},
+    {n:'위 품명 중 하나 이상을 함유한 것',opts:[['50kg',50],['300kg',300],['1,000kg',1000]],a:[]}
+  ]},
+  2:{name:'제2류',prop:'가연성고체',unit:'kg',items:[
+    {n:'황화인',q:100,a:['황화인','황화린','삼황화인','오황화인','칠황화인']},
+    {n:'적린',q:100,a:['적린']},
+    {n:'황',q:100,a:['유황','(?<![현상유])황(?![화린산색])']},
+    {n:'철분',q:500,a:['철분']},
+    {n:'금속분',q:500,a:['금속분','알루미늄분','아연분']},
+    {n:'마그네슘',q:500,a:['마그네슘']},
+    {n:'그 밖에 행정안전부령으로 정하는 것',opts:[['100kg',100],['500kg',500]],a:[]},
+    {n:'위 품명 중 하나 이상을 함유한 것',opts:[['100kg',100],['500kg',500]],a:[]},
+    {n:'인화성고체',q:1000,a:['인화성고체','고형알코올','고형알콜']}
+  ]},
+  3:{name:'제3류',prop:'자연발화성물질 및 금수성물질',unit:'kg',items:[
+    {n:'칼륨',q:10,a:['(?<!탄산|질산|과산화|수소화|염화)칼륨']},
+    {n:'나트륨',q:10,a:['(?<!탄산|질산|과산화|수소화|염화)나트륨']},
+    {n:'알킬알루미늄',q:10,a:['알킬알루미늄','트라이에틸알루미늄','트리에틸알루미늄']},
+    {n:'알킬리튬',q:10,a:['알킬리튬','부틸리튬']},
+    {n:'황린',q:20,a:['황린','백린']},
+    {n:'알칼리금속(칼륨·나트륨 제외) 및 알칼리토금속',q:50,a:['알칼리금속','알칼리토금속']},
+    {n:'유기금속화합물(알킬알루미늄·알킬리튬 제외)',q:50,a:['유기금속화합물']},
+    {n:'금속의 수소화물',q:300,a:['금속의수소화물','수소화물','수소화나트륨','수소화리튬','수소화칼슘']},
+    {n:'금속의 인화물',q:300,a:['금속의인화물','인화칼슘','인화알루미늄','인화아연']},
+    {n:'칼슘 또는 알루미늄의 탄화물',q:300,a:['탄화물','탄화칼슘','카바이드','탄화알루미늄']},
+    {n:'그 밖에 행정안전부령으로 정하는 것',opts:[['10kg',10],['20kg',20],['50kg',50],['300kg',300]],a:['염소화규소']},
+    {n:'위 품명 중 하나 이상을 함유한 것',opts:[['10kg',10],['20kg',20],['50kg',50],['300kg',300]],a:[]}
+  ]},
+  4:{name:'제4류',prop:'인화성액체',unit:'L',items:[
+    {n:'특수인화물',q:50,a:['특수인화물']},
+    {n:'제1석유류',opts:[['비수용성',200],['수용성',400]],ws:true,a:['제?1석유']},
+    {n:'알코올류',q:400,a:['알코올류','알콜류']},
+    {n:'제2석유류',opts:[['비수용성',1000],['수용성',2000]],ws:true,a:['제?2석유']},
+    {n:'제3석유류',opts:[['비수용성',2000],['수용성',4000]],ws:true,a:['제?3석유']},
+    {n:'제4석유류',q:6000,a:['제?4석유']},
+    {n:'동식물유류',q:10000,a:['동식물유']}
+  ]},
+  5:{name:'제5류',prop:'자기반응성물질',unit:'kg',kind:true,items:[
+    {n:'유기과산화물',opts:KIND5,a:['유기과산화물','과산화벤조일','벤조일퍼옥사이드','메틸에틸케톤퍼옥사이드','과산화메틸에틸케톤']},
+    {n:'질산에스터류',opts:KIND5,a:['질산에스터','질산에스테르','질산에스텔','니트로셀룰로오스','나이트로셀룰로오스','니트로셀룰로스','나이트로셀룰로스','니트로글리세린','나이트로글리세린']},
+    {n:'나이트로화합물',opts:KIND5,a:['나이트로화합물','니트로화합물','트라이나이트로톨루엔','트리니트로톨루엔']},
+    {n:'나이트로소화합물',opts:KIND5,a:['나이트로소','니트로소']},
+    {n:'아조화합물',opts:KIND5,a:['(?<!다이|디)아조화합물','아조비스']},
+    {n:'다이아조화합물',opts:KIND5,a:['다이아조','디아조']},
+    {n:'하이드라진 유도체',opts:KIND5,a:['하이드라진','히드라진']},
+    {n:'하이드록실아민',opts:KIND5,a:['하이드록실아민(?!염)','히드록실아민(?!염)']},
+    {n:'하이드록실아민염류',opts:KIND5,a:['하이드록실아민염','히드록실아민염']},
+    {n:'그 밖에 행정안전부령으로 정하는 것',opts:KIND5,a:['아지화합물','아자이드','아지드화','질산구아니딘']},
+    {n:'위 품명 중 하나 이상을 함유한 것',opts:KIND5,a:[]}
+  ]},
+  6:{name:'제6류',prop:'산화성액체',unit:'kg',items:[
+    {n:'과염소산',q:300,a:['과염소산(?!염)']},
+    {n:'과산화수소',q:300,a:['과산화수소']},
+    {n:'질산',q:300,a:['(?<![아과])질산(?!염|에스|구아|칼|나트|암모)']},
+    {n:'그 밖에 행정안전부령으로 정하는 것(할로젠간화합물)',q:300,a:['할로젠간','할로겐간','삼불화브로민','오불화브로민','오불화아이오딘']},
+    {n:'위 품명 중 하나 이상을 함유한 것',q:300,a:[]}
+  ]}
+};
+const CLASS_WORDS = {1:'산화성고체',2:'가연성고체',3:'자연발화성|금수성',4:'인화성액체|석유류|특수인화물|알코올류|알콜류|동식물유',5:'자기반응성',6:'산화성액체'};
+
+function dqOf(cls,item,opt){
+  const it = TABLE[cls]?.items[item]; if(!it) return null;
+  if(it.opts) return it.opts[Math.min(opt||0,it.opts.length-1)][1];
+  return it.q;
+}
+function labelOf(cls,item,opt){
+  const T=TABLE[cls]; const it=T?.items[item]; if(!it) return '-';
+  let s=`${T.name} ${it.n}`;
+  if(it.opts) s+=` (${it.opts[Math.min(opt||0,it.opts.length-1)][0]})`;
+  return s;
+}
+
+// ───────── 국가위험물정보 분류 문자열 → 별표1 매핑 ─────────
+// 예) '제4류 인화성액체 제3석유류(수용성여부 자료없음)', '제5류 자기반응성물질 유기과산화물(2종)', '비위험물 비위험물'
+function classFromString(str){
+  const r={cls:null,item:null,opt:0,notHazard:false,warnings:[]};
+  const s=compact(norm(str||''));
+  if(!s) return r;
+  if(/비위험물/.test(s)){ r.notHazard=true; return r; }
+  const m=s.match(/제([1-6])류/); if(!m) return r;
+  const cls=+m[1]; const body=s.slice(m.index+m[0].length);
+  const best=earliestItem(body,[cls],false);
+  r.cls=cls; r.item=best? best.item : TABLE[cls].items.length-2; // 못 찾으면 '그 밖에'
+  if(!best) r.warnings.push('품명 자동 매칭 실패 — 원문: '+str);
+  const it=TABLE[cls].items[r.item];
+  if(it.opts){
+    if(it.ws){
+      if(/자료없음/.test(body)){ r.opt=0; r.warnings.push('수용성 여부 자료없음 → 비수용성(지정수량 작은 쪽)으로 계산'); }
+      else r.opt=/비수용성/.test(body)?0:(/수용성/.test(body)?1:0);
+    } else if(TABLE[cls].kind){
+      const k=body.match(/([12])종/); r.opt=k?+k[1]-1:0;
+      if(!k) r.warnings.push('제5류 종 판단 필요 → 제1종(10kg)으로 보수 계산');
+    } else { r.opt=0; r.warnings.push(`'${it.n}'의 지정수량은 위험성 시험 결과에 따라 달라짐 → 가장 작은 값으로 계산`); }
+  }
+  return r;
+}
+
+// ───────── 텍스트 정규화 ─────────
+function norm(s){
+  return (s||'').normalize('NFKC')
+    .replace(/[˚º◦]/g,'°').replace(/[－–—−]/g,'-').replace(/[～〜]/g,'~')
+    .replace(/[“”]/g,'"').replace(/ /g,' ');
+}
+const compact = s => s.replace(/\s+/g,'');
+
+function earliestItem(W, clsList, strictOnly){
+  // W: 공백 없는 문자열. 가장 앞에서 매칭되는 품명(동일 위치면 긴 매칭) 반환
+  let best=null;
+  for(const c of clsList){
+    TABLE[c].items.forEach((it,idx)=>{
+      for(const a of it.a){
+        if(strictOnly && a.startsWith('(?<![현상유])황')) continue; // 유별 표기 없을 때 '황' 단독 매칭은 오판 위험
+        let re; try{ re=new RegExp(a); }catch(e){ continue; }
+        const m=W.match(re);
+        if(m){
+          const pos=m.index, len=m[0].length;
+          if(!best || pos<best.pos || (pos===best.pos && len>best.len)) best={cls:c,item:idx,pos,len,hit:m[0]};
+        }
+      }
+    });
+  }
+  return best;
+}
+
+function findNum(T, keys, span){
+  // keys 다음 span 글자 안에서 온도값(°C/°F) 추출. '자료없음' 등이 숫자보다 앞서면 null
+  for(const k of keys){
+    const re=new RegExp(k,'gi'); let m;
+    while((m=re.exec(T))){
+      const seg=T.slice(m.index+m[0].length, m.index+m[0].length+span);
+      const nm=seg.match(/([<>≤≥]=?\s*)?(-?\s?\d+(?:[.,]\d+)?)\s*(?:~\s*-?\d+(?:[.,]\d+)?\s*)?(°\s?[CF]|도(?![가-힣]))/);
+      const na=seg.search(/자료\s*없음|해당\s*없음|정보\s*없음|해당\s*사항\s*없음|N\/?A|not\s*available|없음/i);
+      if(nm && (na<0 || na>seg.indexOf(nm[0]))){
+        let v=parseFloat(nm[2].replace(/\s/g,'').replace(',','.'));
+        if(/F/.test(nm[3])) v=Math.round((v-32)*5/9*10)/10;
+        return {v, raw:(m[0]+seg.slice(0,seg.indexOf(nm[0])+nm[0].length)).replace(/\s+/g,' ').trim(), op:(nm[1]||'').trim()};
+      }
+    }
+  }
+  return null;
+}
+
+// ───────── 제품명 추출 ─────────
+const NAME_JUNK = /물질\s*안전\s*보건\s*자료|material\s*safety|safety\s*data\s*sheet|화학\s*제품과|회사에\s*관한|^\s*msds\s*$|해당\s*없음|자료\s*없음|^페이지|^page\b|^\d+\s*\/\s*\d+$|^[\d\s.\-\/]+$|^(및|과|와|의|,)/i;
+function unspace(s){
+  // '실 리 콘 실 란 트' 처럼 한 글자씩 띄운 글자를 붙임
+  const tk=s.split(' ');
+  if(tk.length>=3 && tk.filter(t=>t.length===1).length/tk.length>=0.6){
+    return s.replace(/([가-힣A-Za-z0-9])\s(?=[가-힣A-Za-z0-9](\s|$|[^가-힣A-Za-z0-9]))/g,'$1').replace(/\s{2,}/g,' ');
+  }
+  return s;
+}
+function cleanName(s){
+  if(!s) return '';
+  s=unspace(norm(s).replace(/\s+/g,' ').trim());
+  s=s.replace(/^[\s:：|·\-=_>]+|[\s:：|·\-=_,.;]+$/g,'').trim();
+  if(!s || s.length<2 && !/[가-힣]/.test(s) || NAME_JUNK.test(s)) return '';
+  return s.length>60? s.slice(0,60).trim()+'…' : s;
+}
+function extractName(T){
+  const LABEL=/(?:제\s*품\s*명\s*칭|(?<!화\s*학\s*)제\s*품\s*명|상\s*품\s*명|화\s*학\s*제\s*품\s*명|product\s*(?:name|identifier)|trade\s*name)/gi;
+  const STOP=/\s\|\s|\||제\s*품\s*의\s*권\s*고|권\s*고\s*용\s*도|사\s*용\s*상\s*의|용\s*도\s*[:：]|공\s*급\s*자|제\s*조\s*자|제\s*조\s*사|수\s*입\s*자|회\s*사\s*명|주\s*소\s*[:：]|긴\s*급|전\s*화\s*번\s*호|(?:^|\s)[나다2]\s*[.)]\s|recommended|supplier|manufacturer|company|cas\s*no|개\s*정\s*일|작\s*성\s*일|문\s*서\s*번\s*호|msds\s*no|페\s*이\s*지|page\s*\d/i;
+  let m; const found=[];
+  while((m=LABEL.exec(T))){
+    let s=T.slice(m.index+m[0].length, m.index+m[0].length+240);
+    // 라벨 뒤의 '(Product name)', '(국문)', ':', '|', 줄바꿈 등을 건너뜀
+    let prev;
+    do{ prev=s; s=s.replace(/^\s*(?:\([^)\n]{0,30}\)|\([^)가-힣]{0,60}\)|\[[^\]\n]{0,30}\]|[:：|·\-=]+)/,'').replace(/^\s+/,''); }while(s!==prev);
+    let v='';
+    for(let line of s.split('\n').slice(0,4)){
+      const st=line.search(STOP); if(st===0) break; if(st>0) line=line.slice(0,st);
+      const cpt=line.replace(/[\s:：|]/g,'');
+      if(!cpt) continue;
+      if(/^\(?(product|name|productname|trade|tradename|identifier|국문|한글|영문)*\)?$/i.test(cpt)) continue; // 줄바꿈된 라벨 조각
+      v=cleanName(line.replace(/\s+[A-Z]{0,5}[-_]?\d{5,}(?:[-_]\d+)*\s*$/,''));
+      break;
+    }
+    if(v){ const pre=T.slice(Math.max(0,m.index-6),m.index); found.push({v,pref:/가\s*[.)]\s*$/.test(pre)}); }
+  }
+  return (found.find(f=>f.pref)||found[0]||{v:''}).v;
+}
+function cleanFileName(f){
+  if(!f) return '';
+  let s=f.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ')
+    .replace(/\b(msds|sds|ghs)\b/ig,' ').replace(/물질\s*안전\s*보건\s*자료/g,' ')
+    .replace(/\((국문|한글|영문|kor|eng|ko|en)\)|\b(kor|eng|ko|kr|en)\b/ig,' ')
+    .replace(/\brev\.?\s*\d+\b|\bver\.?\s*\d+(\.\d+)?\b|\bv\d+(\.\d+)?\b/ig,' ')
+    .replace(/\b(19|20)\d{2}[.\-]?\d{2}[.\-]?\d{2}\b|\b(19|20)\d{2}\b/g,' ')
+    .replace(/\(\s*\)/g,' ').replace(/[\s\-]+/g,' ').replace(/^[^\p{L}\p{N}(]+|[^\p{L}\p{N})]+$/gu,'').trim();
+  return s || f.replace(/\.[^.]+$/,'');
+}
+
+function classify(raw, fileName, hint){
+  const T = norm(raw).replace(/[ \t]+/g,' ');
+  const C = compact(T);
+  const r = {product:'',cls:null,item:null,opt:0,conf:'none',basis:'',evidence:'',warnings:[],notHazard:false,sg:null,flash:null};
+
+  // 제품명: ① '제품명' 라벨 뒤 값 → ② PDF 첫 페이지 큰 글씨(제목) → ③ 파일명 정리
+  r.product = extractName(T) || cleanName((hint&&hint.title||'').replace(/\s+[A-Z]{0,5}[-_]?\d{5,}(?:[-_]\d+)*\s*$/,'')) || cleanFileName(fileName);
+
+  // 비중
+  const sgm = T.match(/(?<!증\s?기\s?)(?:비\s*중|상\s*대\s*밀\s*도|relative\s*density|specific\s*gravity)[^0-9\n]{0,25}(\d+(?:\.\d+)?)/i)
+           || T.match(/밀\s*도[^0-9\n]{0,15}(\d+(?:\.\d+)?)\s*(?:g\/?(?:cm3|cm³|㎤|ml|mL))/i);
+  if(sgm){ const v=parseFloat(sgm[1]); if(v>0.4 && v<3.5) r.sg=v; }
+
+  // ① MSDS 15항 위험물안전관리법 문구
+  const lawRe=/위험물안전관리법|위험물안전관리|위험물관리법/g;
+  const regIdx = C.search(/법적규제|법규제현황|규제현황|규제사항/);
+  let pick=-1, mm;
+  while((mm=lawRe.exec(C))){ if(regIdx<0 || mm.index>regIdx){ pick=mm.index; if(regIdx>=0) break; } }
+  if(pick<0){ lawRe.lastIndex=0; while((mm=lawRe.exec(C))) pick=mm.index; }
+  if(pick>=0){
+    let W=C.slice(pick, pick+240);
+    const lawWord=W.match(/^(위험물안전관리법|위험물안전관리|위험물관리법)/);
+    const head=lawWord?lawWord[0].length:6;
+    const rest=W.slice(head);
+    const stop=rest.search(/폐기물관리법|폐기물|기타국내|기타외국|국외규제|외국법|잔류성|EU분류|미국관리|16\.?그|16\.?기타|화학물질관리법|화학물질의등록|산업안전보건법|유해화학|[나다라마바사]\.(?=[가-힣A-Za-z])/);
+    W = W.slice(0, head + (stop>=0?stop:rest.length));
+    const body=W.slice(head);
+    r.evidence=W;
+    let cls=null;
+    const cm=body.match(/제?([1-6])류(?!석)/);
+    if(cm) cls=+cm[1];
+    if(!cls){ for(const k in CLASS_WORDS){ if(new RegExp(CLASS_WORDS[k]).test(body)){ cls=+k; break; } } }
+    const best = earliestItem(body, cls?[cls]:[1,2,3,4,5,6], !cls);
+    if(best){ cls=cls||best.cls; if(best.cls!==cls){ /* 류 표기와 품명 불일치 → 품명 기준 */ r.warnings.push(`15항의 유별 표기(${TABLE[cls].name})와 품명(${best.hit})이 맞지 않아 품명 기준으로 판정함`); cls=best.cls; } }
+    const nmq = body.match(/(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(l|리터|ℓ|kg|킬로그램)(?![a-z])/i);
+    const msdsQ = nmq? parseFloat(nmq[1].replace(/,/g,'')) : null;
+    if(cls && best){
+      r.cls=cls; r.item=best.item; r.conf='high'; r.basis='MSDS 15항';
+      const it=TABLE[cls].items[best.item];
+      if(it.opts){
+        if(it.ws){
+          if(/비수용성/.test(body)) r.opt=0;
+          else if(/수용성/.test(body)) r.opt=1;
+          else if(msdsQ && it.opts.findIndex(o=>o[1]===msdsQ)>=0) r.opt=it.opts.findIndex(o=>o[1]===msdsQ);
+          else { r.opt=0; r.warnings.push('수용성 여부 표기 없음 → 비수용성(지정수량이 작은 쪽)으로 계산'); }
+        } else if(TABLE[cls].kind){
+          const km=body.match(/제?([12])종/);
+          r.opt = km? (+km[1]-1) : 0;
+          if(!km) r.warnings.push('제5류 제1종/제2종 구분은 위험성 시험 결과로 정함. 표기 없어 제1종(10kg)으로 보수 계산 — 시험성적 확인 시 변경');
+        } else if(msdsQ){
+          const oi=it.opts.findIndex(o=>o[1]===msdsQ); r.opt= oi>=0?oi:0;
+        }
+      }
+      const cur=dqOf(r.cls,r.item,r.opt);
+      if(msdsQ && cur && msdsQ!==cur){
+        r.warnings.push(`MSDS 기재 수량(${msdsQ.toLocaleString()})이 현행 별표1(${cur.toLocaleString()} ${TABLE[cls].unit})과 다름 — 구 기준 MSDS일 수 있어 현행 기준 적용`);
+      }
+    } else if(cls){
+      r.cls=cls; r.item=0; r.conf='low'; r.basis='MSDS 15항(품명 불명)';
+      r.warnings.push(`${TABLE[cls].name}로 표기되어 있으나 품명을 찾지 못함 → 품명을 직접 선택하세요`);
+    } else if(/해당없음|비해당|해당사항없음|해당안됨|해당되지않|비위험물|적용제외|규제없음|규제대상아님|비대상|미해당|해당무|^[:：]?없음/.test(body.replace(/자료없음|정보없음/g,''))){
+      r.notHazard=true; r.conf='high'; r.basis='MSDS 15항';
+    } else if(/자료없음|정보없음/.test(body)){
+      r.warnings.push('15항 위험물안전관리법 항목이 "자료없음"으로 되어 있어 물성(인화점)으로 추정 시도');
+    }
+    if(r.cls===6){
+      if(r.item===1) r.warnings.push('과산화수소는 농도 36중량% 이상일 때만 위험물');
+      if(r.item===2) r.warnings.push('질산은 비중 1.49 이상일 때만 위험물');
+    }
+    if(r.cls===2 && (r.item===3||r.item===4||r.item===5)) r.warnings.push('철분·금속분·마그네슘은 입도/함량 조건(53㎛·150㎛·2㎜ 등) 충족 시에만 위험물');
+  }
+
+  // ② 15항으로 판정 못 했을 때: 9항 물성으로 제4류 추정
+  const fp = findNum(T,['인\\s*화\\s*점','flash\\s*point'],70);
+  const bp = findNum(T,['초기\\s*끓는\\s*점','끓는\\s*점','비\\s*점','boiling\\s*point'],70);
+  const ait= findNum(T,['자연\\s*발화\\s*온도','자연\\s*발화\\s*점','(?<!자연\\s?)발화\\s*점','auto-?\\s*ignition'],70);
+  r.flash=fp;
+  if(r.conf==='none' || (r.conf!=='high' && r.cls===null)){
+    const stM = T.match(/성\s*상\s*[:：]?\s*[^\s\n][^\n]{0,38}/) || T.match(/(?:물\s*리\s*적\s*상\s*태|physical\s*state|appearance|외\s*관)\s*[:：]?\s*[^\s\n][^\n]{0,38}/i);
+    const st = stM? stM[0] : '';
+    const solid = /고체|분말|가루|분체|페이스트|solid|powder|paste|과립|펠렛/i.test(st);
+    const liquid = /액체|액상|liquid/i.test(st) || (!solid && /인화성액체/.test(C));
+    const solM = T.match(/(?:수\s*용\s*해\s*도|물\s*에\s*대한\s*용해도|용\s*해\s*도|solubility)[^\n]{0,50}/i);
+    const sol = solM? solM[0] : '';
+    let water=null;
+    if(/불용|녹지\s*않|비혼화|불혼화|insoluble|immiscible|not\s*miscible/i.test(sol)) water=false;
+    else if(/혼화|자유롭게|완전.{0,3}(용해|혼합|녹)|임의|miscible|무한|100\s*%/i.test(sol)) water=true;
+    const evid=[fp&&('인화점 '+fp.op+fp.v+'℃'),bp&&('끓는점 '+bp.v+'℃'),ait&&('발화점 '+ait.v+'℃'),st&&('성상: '+st.replace(/^.*?(?:성\s*상|외\s*관|물\s*리\s*적\s*상\s*태|physical\s*state|appearance)\s*[:：]?\s*/i,'').trim().slice(0,20)),sol&&('용해도: '+sol.replace(/^.*?(?:용\s*해\s*도|solubility)\s*[:：]?\s*/i,'').trim().slice(0,25))].filter(Boolean).join(' · ');
+    if(fp && !solid){
+      let item;
+      if((ait && ait.v<=100) || (fp.v<=-20 && bp && bp.v<=40)) item=0;
+      else if(fp.v<21) item=1;
+      else if(fp.v<70) item=3;
+      else if(fp.v<200) item=4;
+      else if(fp.v<250) item=5;
+      else item=-1;
+      // 3항 구성성분에서 동식물유 / 광유 여부 확인
+      const s3a=T.search(/3\s*\.\s*(구성\s*성분|명칭\s*및\s*함유량|성분)/), s3b=T.search(/4\s*\.\s*응급/);
+      const sec3 = s3a>=0 ? T.slice(s3a, s3b>s3a? s3b : s3a+1500) : '';
+      const PLANT=/카놀라|카롤라|유채|대두유|콩기름|팜유|야자유|코코넛|피마자|아마인|올리브유|해바라기|옥수수유|면실유|미강유|식물성\s*(유|기름|오일)|식물유|동물성\s*(유|기름)|우지|돈지|어유|canola|rapeseed|soybean\s*oil|palm\s*oil|coconut\s*oil|castor\s*oil|linseed|sunflower|vegetable\s*oil|fatty\s*acid.{0,10}ester/i;
+      const MINERAL=/광유|미네랄\s*오일|파라핀|나프텐|윤활\s*기유|등유|경유|distillates?\s*\(?petroleum|petroleum|mineral\s*oil|base\s*oil|kerosene|naphtha|white\s*spirit|solvent/i;
+      const plant3=PLANT.test(sec3), mineral3=MINERAL.test(sec3);
+      if(plant3 && !mineral3 && fp.v<250 && item!==0){
+        item=6;
+        r.warnings.push('3항 구성성분이 식물성/동물성 기름 → 동식물유류로 판정 (인화점 250℃ 미만)');
+        r.warnings.push('동식물유류는 기준 용기에 수납·저장하고 용기 외부에 품명·수량·화기엄금 표시가 있으면 위험물에서 제외되는 단서 규정 있음');
+        if(MINERAL.test(C)) r.warnings.push('다른 항목(15항 등)에 광유(석유계) 성분 표기가 섞여 있음 — MSDS 내용 불일치, 공급사 확인 권장');
+      } else if(plant3 && mineral3){
+        r.warnings.push('식물성 기름과 광유가 함께 들어 있음 — 주성분에 따라 석유류/동식물유류가 갈리므로 공급사 확인 필요');
+      }
+      if(item>=0){
+        r.cls=4; r.item=item; r.conf='mid'; r.basis='인화점 추정';
+        r.evidence=(r.evidence? r.evidence+' ⟶ ':'')+evid;
+        const it=TABLE[4].items[item];
+        if(it.ws){
+          if(water===true) r.opt=1;
+          else { r.opt=0; if(water===null) r.warnings.push('수용성 여부를 확인하지 못해 비수용성(지정수량 작은 쪽)으로 계산'); }
+        }
+        if(/메탄올|에탄올|메틸알코올|에틸알코올|이소프로필알코올|아이소프로필알코올|이소프로판올|아이소프로판올|프로판올|IPA/i.test(C) && (item===1||item===3))
+          r.warnings.push('C1~C3 알코올 성분이 있음 — 함량 60중량% 이상이면 알코올류(400L)로 판정');
+        if(item>=3 && item<=5) r.warnings.push('도료류 등 가연성액체량 40중량% 이하 제품은 제2~4석유류에서 제외될 수 있음');
+        r.warnings.push('15항에 위험물 분류가 명시되지 않아 인화점으로 추정한 결과입니다. MSDS 원문 확인 필요');
+      } else {
+        r.notHazard=true; r.conf='mid'; r.basis='인화점 추정';
+        r.evidence=evid; r.warnings.push('인화점 250℃ 이상 → 제4류 비해당(동식물유류인 경우 제외). 원문 확인 필요');
+      }
+    } else if(solid && /인화성고체/.test(C) && fp && fp.v<40){
+      r.cls=2; r.item=8; r.conf='mid'; r.basis='인화점 추정'; r.evidence=evid;
+      r.warnings.push('인화점 40℃ 미만 고체 → 제2류 인화성고체로 추정');
+    } else if(r.conf==='none'){
+      r.evidence = r.evidence || evid || '(판정 근거 문구를 찾지 못함)';
+      if(!raw || raw.replace(/\s/g,'').length<200) r.warnings.push('텍스트가 거의 추출되지 않음 — 스캔(이미지) PDF일 수 있음. 15항 내용을 붙여넣거나 유별을 직접 선택하세요');
+      else r.warnings.push('위험물안전관리법 분류와 인화점을 찾지 못함 → 유별을 직접 선택하세요');
+    }
+  }
+  if(r.conf!=='high' && /산화성\s*액체/.test(T) && r.cls!==6) r.warnings.push('GHS 산화성 액체 표시 있음 — 제6류(과산화수소·질산 등) 해당 여부 확인');
+  return r;
+}
+/*ENGINE-END*/
+
+// ───────── 프리셋 (현장 다빈도) ─────────
+const PRESETS = [
+  ['휘발유',4,1,0,0.74],['경유',4,3,0,0.84],['등유',4,3,0,0.80],['벙커C유(중유)',4,4,0,0.95],
+  ['아세톤',4,1,1,0.79],['톨루엔',4,1,0,0.87],['자일렌(크실렌)',4,3,0,0.86],['초산에틸',4,1,0,0.90],
+  ['메틸에틸케톤(MEK)',4,1,0,0.81],['노말헥산',4,1,0,0.66],['메탄올',4,2,0,0.79],['에탄올',4,2,0,0.79],
+  ['이소프로필알코올(IPA)',4,2,0,0.79],['에틸렌글리콜(부동액 원액)',4,4,1,1.11],['글리세린',4,4,1,1.26],
+  ['엔진오일·기어유(일반)',4,5,0,0.88],['유압유(일반)',4,5,0,0.87],['디에틸에테르',4,0,0,0.71],['이황화탄소',4,0,0,1.26],
+  ['과산화수소(36% 이상)',6,1,0,1.13],['질산(비중1.49 이상)',6,2,0,1.5],['탄화칼슘(카바이드)',3,9,0,2.2],
+  ['알루미늄분',2,4,0,null],['황',2,2,0,null],['고형연료(고형알코올)',2,8,0,null]
+];
+
+// ───────── 상태 ─────────
+let rows=[]; let target=1; let uid=1;
+const LS='hazmat-calc-v1';
+let meta={site:'',writer:''};
+function save(){ try{ localStorage.setItem(LS, JSON.stringify({rows,target,meta})); }catch(e){} }
+function load(){ try{ const d=JSON.parse(localStorage.getItem(LS)||'null'); if(d){ rows=d.rows||[]; target=d.target||1; meta=d.meta||meta; uid=rows.reduce((m,r)=>Math.max(m,r.id),0)+1; } }catch(e){} }
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(v,d=2)=> (v==null||isNaN(v))?'-':Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d});
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2600); }
+
+function lastLoc(){ return rows.length? rows[rows.length-1].loc : '위험물 보관창고'; }
+function locList(){ return [...new Set(rows.map(r=>r.loc))]; }
+
+// ───────── 유별/품명/구분 선택 컴포넌트 ─────────
+function picker(init, onChange){
+  const wrap=document.createElement('div'); wrap.className='row';
+  wrap.innerHTML=`<label class="f">유별<select class="pc"></select></label>
+    <label class="f" style="flex:2 1 200px">품명<select class="pi"></select></label>
+    <label class="f po-w">구분<select class="po"></select></label>
+    <label class="f narrow">지정수량<input class="pq" readonly tabindex="-1" style="background:#f6f7f9"></label>`;
+  const pc=wrap.querySelector('.pc'), pi=wrap.querySelector('.pi'), po=wrap.querySelector('.po'), pq=wrap.querySelector('.pq'), pow=wrap.querySelector('.po-w');
+  for(const k in TABLE) pc.add(new Option(`${TABLE[k].name} ${TABLE[k].prop}`,k));
+  const st={cls:init?.cls||4,item:init?.item??0,opt:init?.opt??0};
+  function fillItems(){ pi.innerHTML=''; TABLE[st.cls].items.forEach((it,i)=>pi.add(new Option(it.n+(it.opts?'':` (${it.q.toLocaleString()}${TABLE[st.cls].unit})`),i))); pi.value=st.item; }
+  function fillOpts(){ const it=TABLE[st.cls].items[st.item]; po.innerHTML='';
+    if(it.opts){ pow.style.display=''; it.opts.forEach((o,i)=>po.add(new Option(`${o[0]}${it.ws||TABLE[st.cls].kind?` (${o[1].toLocaleString()}${TABLE[st.cls].unit})`:''}`,i))); po.value=Math.min(st.opt,it.opts.length-1); st.opt=+po.value; }
+    else { pow.style.display='none'; st.opt=0; }
+    pq.value=dqOf(st.cls,st.item,st.opt).toLocaleString()+' '+TABLE[st.cls].unit; }
+  pc.value=st.cls; fillItems(); fillOpts();
+  pc.onchange=()=>{ st.cls=+pc.value; st.item=0; st.opt=0; fillItems(); fillOpts(); onChange&&onChange(st); };
+  pi.onchange=()=>{ st.item=+pi.value; st.opt=0; fillOpts(); onChange&&onChange(st); };
+  po.onchange=()=>{ st.opt=+po.value; fillOpts(); onChange&&onChange(st); };
+  return {el:wrap, get:()=>({...st}), set:(s)=>{ Object.assign(st,s); pc.value=st.cls; fillItems(); fillOpts(); }};
+}
+
+function qtyFields(init){
+  const w=document.createElement('div'); w.className='row'; w.style.marginTop='8px';
+  const locs=locList(); const dl='dl'+Math.random().toString(36).slice(2,7);
+  w.innerHTML=`<label class="f" style="flex:2 1 160px">저장장소<input class="ql" list="${dl}" value="${esc(init?.loc||lastLoc())}"><datalist id="${dl}">${locs.map(l=>`<option value="${esc(l)}">`).join('')}</datalist></label>
+   <label class="f narrow">1개 용량<input class="qc" type="number" min="0" step="any" value="${init?.cap??''}" placeholder="18"></label>
+   <label class="f narrow">개수<input class="qn" type="number" min="0" step="1" value="${init?.cnt??1}"></label>
+   <label class="f narrow">단위<select class="qu"><option>L</option><option>mL</option><option>kg</option><option>g</option></select></label>
+   <label class="f narrow" title="L↔kg 환산할 때만 사용">비중<input class="qs" type="number" min="0" step="any" value="${init?.sg??''}" placeholder="1.0"></label>`;
+  w.querySelector('.qu').value=init?.unit||'L';
+  return {el:w, get:()=>({loc:(w.querySelector('.ql').value||'위험물 보관창고').trim(), cap:parseFloat(w.querySelector('.qc').value)||0, cnt:parseFloat(w.querySelector('.qn').value)||0, unit:w.querySelector('.qu').value, sg:parseFloat(w.querySelector('.qs').value)||null}),
+          setUnit:(u)=>{ w.querySelector('.qu').value=u; }, setSG:(v)=>{ if(v) w.querySelector('.qs').value=v; }};
+}
+
+// ───────── 계산 ─────────
+function toBase(r){
+  const U=TABLE[r.cls].unit; const amt=(r.cap||0)*(r.cnt||0);
+  const vol = r.unit==='L'||r.unit==='mL'; const L = r.unit==='mL'? amt/1000 : r.unit==='g'? amt/1000 : amt; // L 또는 kg
+  let needSG=false, v;
+  if(U==='L'){ if(vol) v=L; else { needSG=true; v=L/(r.sg||1); } }
+  else { if(!vol) v=L; else { needSG=true; v=L*(r.sg||1); } }
+  return {v, needSG, sgAssumed: needSG && !r.sg};
+}
+
+function render(){
+  $('#target').value=String(target);
+  const tb=$('#tbl tbody'); tb.innerHTML='';
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="13" class="empty">아직 추가된 물질이 없습니다. MSDS를 올리거나 유별을 직접 선택해 추가하세요.</td></tr>`; $('#summary').innerHTML=''; save(); return; }
+  const locs=locList(); const tot={};
+  rows.forEach(r=>{ const b=toBase(r); r._v=b.v; r._dq=dqOf(r.cls,r.item,r.opt); r._x=r._v/r._dq; r._b=b; tot[r.loc]=(tot[r.loc]||0)+r._x; });
+  // 요약
+  $('#summary').innerHTML=locs.map(l=>{
+    const x=tot[l]; const s = x>=1?2:(x>=0.2?1:0);
+    const txt = s===2?'지정수량 이상 — 위험물안전관리법상 저장소·취급소 허가 대상':(s===1?'소량위험물 (지정수량 1/5 이상) — 시·도 조례 기준 적용':'지정수량 1/5 미만');
+    const ok = x<target;
+    const max=Math.max(1.2,x*1.1); const w=Math.min(100,x/max*100);
+    const col= s===2?'var(--bad)':(s===1?'#e39a1f':'var(--ok)');
+    return `<div class="locsum"><div class="hd"><b>📍 ${esc(l)}</b><span class="status s${s}">${txt}</span></div>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:4px">
+        <span class="big" style="color:${col}">${fmt(x,3)}<span style="font-size:15px"> 배</span></span>
+        <span class="muted">관리 목표(${target}배 미만) ${ok?`<b style="color:var(--ok)">충족</b> · 여유 ${fmt(target-x,3)}배`:`<b style="color:var(--bad)">초과</b> · ${fmt(x-target,3)}배 줄여야 함`}</span>
+      </div>
+      <div class="gauge"><div class="fill" style="width:${w}%;background:${col}"></div>
+        <div class="mk" style="left:${0.2/max*100}%"><span>0.2 (소량)</span></div>
+        <div class="mk" style="left:${1/max*100}%"><span>1.0 (지정수량)</span></div></div></div>`;
+  }).join('');
+  // 표
+  const byLoc=[...rows].sort((a,b)=>locs.indexOf(a.loc)-locs.indexOf(b.loc));
+  byLoc.forEach(r=>{
+    const U=TABLE[r.cls].unit; const rem=(target-tot[r.loc]);
+    const add = rem>0? rem*r._dq : 0;
+    const tr=document.createElement('tr');
+    const tg = {high:'high',mid:'mid',low:'low',none:'none',manual:'blue',preset:'blue'}[r.conf]||'blue';
+    tr.innerHTML=`<td><input value="${esc(r.loc)}" data-k="loc" style="width:110px"></td>
+      <td><input value="${esc(r.name)}" data-k="name" style="width:150px"></td>
+      <td style="min-width:180px">${esc(labelOf(r.cls,r.item,r.opt))}</td>
+      <td class="num">${fmt(r._dq,0)} ${U}</td>
+      <td class="num"><input type="number" step="any" min="0" value="${r.cap}" data-k="cap"></td>
+      <td class="num"><input type="number" step="1" min="0" value="${r.cnt}" data-k="cnt" style="width:56px"></td>
+      <td><select data-k="unit">${['L','mL','kg','g'].map(u=>`<option ${u===r.unit?'selected':''}>${u}</option>`).join('')}</select></td>
+      <td class="num"><input type="number" step="any" min="0" value="${r.sg??''}" data-k="sg" style="width:56px" placeholder="${r._b.needSG?'필요':'-'}" ${r._b.needSG&&!r.sg?'title="단위 환산에 비중 필요 — 미입력 시 1.0 가정"':''}></td>
+      <td class="num">${fmt(r._v,2)} ${U}${r._b.sgAssumed?' <span class="tag mid" title="비중 1.0 가정">비중?</span>':''}</td>
+      <td class="num"><b>${fmt(r._x,3)}</b></td>
+      <td class="num">${rem>0?'+'+fmt(add,1)+' '+U:'<span style="color:var(--bad)">초과</span>'}</td>
+      <td><span class="tag ${tg}" title="${esc((r.evidence||'')+(r.warnings?.length?'\n· '+r.warnings.join('\n· '):''))}">${esc(r.basis||'직접선택')}</span></td>
+      <td class="noprint"><button class="btn sm ghost" data-del="${r.id}" title="삭제">✕</button></td>`;
+    tr.querySelectorAll('[data-k]').forEach(inp=>{
+      inp.addEventListener('change',()=>{ const k=inp.dataset.k; let v=inp.value; if(k==='cap'||k==='cnt') v=parseFloat(v)||0; if(k==='sg') v=parseFloat(v)||null; if(k==='loc') v=v.trim()||'위험물 보관창고'; r[k]=v; render(); });
+    });
+    tr.querySelector('[data-del]').onclick=()=>{ rows=rows.filter(x=>x.id!==r.id); render(); };
+    tb.appendChild(tr);
+  });
+  renderReport(tot);
+  save();
+}
+
+// ───────── 인쇄용 보고서 ─────────
+function statusText(x){
+  return x>=1 ? '지정수량 이상 — 위험물안전관리법상 저장소·취급소 허가 대상'
+       : x>=0.2 ? '소량위험물 (지정수량 1/5 이상 ~ 1배 미만) — 시·도 조례 기준 적용'
+       : '지정수량 1/5 미만';
+}
+function renderReport(tot){
+  const R=$('#report');
+  if(!rows.length){ R.innerHTML=''; return; }
+  const d=new Date(); const ds=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+  const locs=locList(); let notes=[]; let h='';
+  h+=`<h1>위험물 지정수량 배수 산정표</h1>
+    <div class="meta"><span>현장명 : ${esc(meta.site||'')}</span><span>작성일 : ${ds}</span><span>작성자 : ${esc(meta.writer||'')}</span></div>`;
+  locs.forEach((l,li)=>{
+    const rs=rows.filter(r=>r.loc===l); const x=tot[l];
+    h+=`<h2>${locs.length>1?(li+1)+'. ':''}저장장소 : ${esc(l)}</h2>
+      <table><thead><tr>
+        <th style="width:28px">No</th><th>제품 / 물질명</th><th>유별 · 품명</th><th>지정수량</th>
+        <th>1개 용량</th><th>개수</th><th>총 용량<span class="calc">(1개 용량 × 개수)</span></th>
+        <th>환산량<span class="calc">(지정수량 단위)</span></th><th>지정수량 배수<span class="calc">(환산량 ÷ 지정수량)</span></th>
+      </tr></thead><tbody>`;
+    rs.forEach((r,i)=>{
+      const U=TABLE[r.cls].unit; const total=(r.cap||0)*(r.cnt||0);
+      let conv;
+      if(r._b.needSG){
+        const sg=r.sg||1;
+        conv = U==='L' ? `${fmt(r._v,2)} ${U}<span class="calc">${fmt(total,2)}${r.unit} ÷ 비중 ${sg}${r.sg?'':'(가정)'}</span>`
+                       : `${fmt(r._v,2)} ${U}<span class="calc">${fmt(total,2)}${r.unit} × 비중 ${sg}${r.sg?'':'(가정)'}</span>`;
+      } else if(r.unit==='mL'||r.unit==='g'){
+        conv = `${fmt(r._v,3)} ${U}<span class="calc">${fmt(total,2)}${r.unit} ÷ 1,000</span>`;
+      } else conv = `${fmt(r._v,2)} ${U}`;
+      h+=`<tr>
+        <td class="c">${i+1}</td><td>${esc(r.name)}</td><td>${esc(labelOf(r.cls,r.item,r.opt))}</td>
+        <td class="r">${fmt(r._dq,0)} ${U}</td>
+        <td class="r">${fmt(r.cap,2)} ${r.unit}</td><td class="r">${fmt(r.cnt,0)} 개</td>
+        <td class="r">${fmt(total,2)} ${r.unit}</td>
+        <td class="r">${conv}</td>
+        <td class="r"><b>${fmt(r._x,3)} 배</b><span class="calc">${fmt(r._v,2)} ÷ ${fmt(r._dq,0)}</span></td></tr>`;
+      (r.warnings||[]).forEach(w=>notes.push(`${r.name} : ${w}`));
+    });
+    h+=`<tr class="sum"><td colspan="8" class="c">지정수량 배수 합계 &nbsp;( ${rs.map(r=>fmt(r._x,3)).join(' + ')} )</td>
+        <td class="r">${fmt(x,3)} 배</td></tr></tbody></table>
+      <div class="verdict">▶ <b>${esc(l)}</b> 의 지정수량 배수 합계는 <b class="big2">${fmt(x,3)} 배</b> 로,
+        <b>${statusText(x)}</b> 입니다.<br>
+        관리 목표 (${target===1?'지정수량 미만, 1배 미만':'소량위험물 미만, 0.2배 미만'}) :
+        ${x<target?`<b>충족</b> — 여유 ${fmt(target-x,3)}배`:`<b style="color:#b3261e">초과</b> — ${fmt(x-target,3)}배 이상 줄여야 함`}</div>`;
+  });
+  h+=`<div class="notes">
+    ※ 산정 기준 : 위험물안전관리법 시행령 [별표 1] 지정수량. 둘 이상의 품명을 같은 장소에서 저장·취급하는 경우 각 품명의 수량을 지정수량으로 나눈 값의 합이 1 이상이면 지정수량 이상으로 봄 (위험물안전관리법 제5조).<br>
+    ※ 지정수량의 1/5 이상 지정수량 미만은 소량위험물로 시·도 조례의 저장·취급 기준 적용.
+    ${notes.length?'<br>'+[...new Set(notes)].map(n=>'※ '+esc(n)).join('<br>'):''}</div>`;
+  R.innerHTML=h;
+}
+
+function addRow(cls, q, meta){
+  if(!q.cap || !q.cnt){ toast('1개 용량과 개수를 입력하세요'); return false; }
+  rows.push({id:uid++, loc:q.loc, name:meta.name||'(이름 없음)', cls:cls.cls, item:cls.item, opt:cls.opt, cap:q.cap, cnt:q.cnt, unit:q.unit, sg:q.sg,
+    conf:meta.conf||'manual', basis:meta.basis||'직접선택', evidence:meta.evidence||'', warnings:meta.warnings||[]});
+  render(); toast(`"${meta.name}" 추가됨`); return true;
+}
+
+// ───────── MSDS 파일 읽기 ─────────
+async function pdfText(file){
+  if(!window.pdfjsLib) throw new Error('PDF 엔진을 불러오지 못했습니다 (인터넷 연결 필요)');
+  try{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  let out=''; let title='';
+  for(let p=1;p<=Math.min(pdf.numPages,30);p++){
+    const page=await pdf.getPage(p); const tc=await page.getTextContent();
+    // 입력란(폼 필드)에 들어간 값은 일반 텍스트로 안 나오므로 따로 읽어 위치대로 끼워 넣음 (ezPDF 등)
+    try{
+      const anns=await page.getAnnotations();
+      const extra=[];
+      for(const an of anns){
+        let v = typeof an.fieldValue==='string'? an.fieldValue : Array.isArray(an.fieldValue)? an.fieldValue.join(' ') : (an.contentsObj&&an.contentsObj.str)||'';
+        v=(v||'').replace(/\r/g,'\n').trim(); if(!v || !an.rect) continue;
+        const [x1,y1,x2,y2]=an.rect; const h=Math.min(Math.max((y2-y1)*0.6,6),14);
+        v.split('\n').forEach((line,i)=>{ if(line.trim()) extra.push({str:line, transform:[h,0,0,h,x1,(y1+y2)/2+h*0.35-i*h*1.2], width:x2-x1, height:h, _ann:true}); });
+      }
+      if(extra.length){
+        tc.items=tc.items.concat(extra);
+      }
+    }catch(e){}
+    if(p===1){
+      // 첫 페이지에서 가장 큰 글씨 줄(문서 제목 제외)을 제품명 후보로
+      const lines={}; const hs=[];
+      for(const it of tc.items){ if(!it.str) continue;
+        const h=Math.round(Math.abs(it.transform[3])||it.height||0); const y=Math.round(it.transform[5]/2);
+        if(it.str.trim()) hs.push(h); const k=h+'|'+y; (lines[k]=lines[k]||{h,y,parts:[]}).parts.push([it.transform[4],it.str,it.width||0]); }
+      const joinLine=(ps,h)=>{ ps.sort((a,b)=>a[0]-b[0]); let s='',end=null; for(const [x,t,w] of ps){ if(end!==null && x-end>(h||8)*0.25) s+=' '; s+=t; end=x+w; } return s; };
+      const cands=Object.values(lines).map(l=>({h:l.h,s:joinLine(l.parts,l.h).replace(/\s+/g,' ').trim()}))
+        .filter(l=>cleanName(l.s) && !/제\s*품\s*명|^\s*\d+\s*\.|정보|관한|구성성분|유해성/.test(l.s)).sort((a,b)=>b.h-a.h);
+      hs.sort((a,b)=>a-b); const med=hs[Math.floor(hs.length/2)]||10;
+      if(cands[0] && cands[0].h>=med*1.3) title=cands[0].s;
+    }
+    // 화면 위치(위→아래, 왼→오) 기준으로 줄을 다시 구성 (값이 나중에 덧씌워진 PDF 대응)
+    const its=tc.items.filter(it=>'str' in it && it.str!=='').map(it=>({s:it.str,x:it.transform[4],y:it.transform[5],h:Math.abs(it.transform[3])||it.height||8,w:it.width||0}));
+    its.sort((a,b)=>b.y-a.y);
+    const lines=[];
+    for(const it of its){
+      const L=lines[lines.length-1];
+      if(L && Math.abs(L.y-it.y)<=Math.max(2,Math.min(L.h,it.h)*0.5)) L.items.push(it);
+      else lines.push({y:it.y,h:it.h,items:[it]});
+    }
+    for(const L of lines){
+      L.items.sort((a,b)=>a.x-b.x);
+      let s='', end=null;
+      for(const it of L.items){
+        if(end!==null && it.x-end>it.h*0.25 && !/\s$/.test(s) && !/^\s/.test(it.s)) s+=' ';
+        s+=it.s; end=Math.max(end??-1e9, it.x+it.w);
+      }
+      out+=s+'\n';
+    }
+    out+='\n';
+  }
+  return {text:out, title};
+}
+
+async function handleFiles(files){
+  for(const f of files){
+    const box=document.createElement('div'); box.className='pcard'; box.innerHTML=`<span class="spin"></span> ${esc(f.name)} 읽는 중…`;
+    $('#parsed').prepend(box);
+    try{
+      let text='', hint=null;
+      if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){ const o=await pdfText(f); text=o.text; hint={title:o.title}; }
+      else if(/\.(txt|csv|md)$/i.test(f.name)||f.type.startsWith('text/')) text=await f.text();
+      else throw new Error('PDF 또는 TXT 파일만 읽을 수 있습니다 (HWP·이미지는 PDF로 변환해 주세요)');
+      showParsed(box, classify(text, f.name, hint), f.name);
+    }catch(e){ box.innerHTML=`<div class="top"><span class="title">${esc(f.name)}</span><span class="tag low">읽기 실패</span></div><div class="muted">${esc(e.message||e)}</div>`; }
+  }
+}
+
+function showParsed(box, r, src){
+  const confTxt={high:'MSDS 15항 명시',mid:'물성으로 추정 · 확인 필요',low:'일부만 판정 · 선택 필요',none:'판정 불가 · 직접 선택'}[r.conf];
+  box.innerHTML=`<div class="top"><div><div class="title">${esc(r.product||src)}</div><div class="muted">${esc(src)}</div></div>
+     <div style="display:flex;gap:4px;align-items:center"><span class="tag ${r.conf}">${confTxt}</span><button class="btn sm ghost x" title="닫기">✕</button></div></div>
+    <div class="result ${r.notHazard?'nh':''}">${r.notHazard?'위험물안전관리법 비해당 (위험물 아님)':(r.cls?labelOf(r.cls,r.item,r.opt)+' · 지정수량 '+dqOf(r.cls,r.item,r.opt).toLocaleString()+TABLE[r.cls].unit:'유별을 판정하지 못했습니다')}</div>
+    ${r.evidence?`<div class="ev">근거: ${esc(r.evidence)}</div>`:''}
+    ${r.warnings.length?`<ul class="warns">${r.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:''}
+    <div class="body"></div>`;
+  box.querySelector('.x').onclick=()=>box.remove();
+  const body=box.querySelector('.body');
+  const build=()=>{
+    body.innerHTML='';
+    const nm=document.createElement('div'); nm.className='row'; nm.style.marginTop='8px';
+    nm.innerHTML=`<label class="f" style="flex:1 1 100%">제품/물질명<input class="nm" value="${esc(r.product||src)}"></label>`;
+    body.appendChild(nm);
+    const pk=picker(r.cls?{cls:r.cls,item:r.item,opt:r.opt}:{cls:4,item:0,opt:0}, st=>{ qf.setUnit(TABLE[st.cls].unit); });
+    body.appendChild(pk.el);
+    const qf=qtyFields({unit:TABLE[r.cls||4].unit, sg:r.sg});
+    body.appendChild(qf.el);
+    const bt=document.createElement('div'); bt.style.cssText='display:flex;justify-content:flex-end;margin-top:8px';
+    bt.innerHTML=`<button class="btn pri">목록에 추가</button>`; body.appendChild(bt);
+    bt.querySelector('button').onclick=()=>{
+      const sel=pk.get(); const changed = r.cls && (sel.cls!==r.cls||sel.item!==r.item||sel.opt!==r.opt);
+      if(addRow(sel, qf.get(), {name:nm.querySelector('.nm').value.trim()||r.product, conf: (!r.cls||changed)?'manual':r.conf, basis:(!r.cls||changed)?'직접선택(MSDS 수정)':r.basis, evidence:r.evidence, warnings:r.warnings})) box.remove();
+    };
+  };
+  if(r.notHazard){
+    body.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-top:6px"><button class="btn sm">그래도 유별 지정해서 추가</button></div>`;
+    body.querySelector('button').onclick=()=>{ r.cls=null; build(); };
+  } else build();
+}
+
+// ───────── 직접 선택 영역 ─────────
+let mPick, mQty, manualMeta=null;
+function initManual(){
+  mPick=picker({cls:4,item:3,opt:0}, st=>{ mQty.setUnit(TABLE[st.cls].unit); manualMeta=null; });
+  $('#manualPicker').innerHTML=''; $('#manualPicker').appendChild(mPick.el);
+  const nameRow=document.createElement('div'); nameRow.className='row'; nameRow.style.marginTop='8px';
+  nameRow.innerHTML=`<label class="f" style="flex:1 1 100%">제품/물질명<input id="mName" placeholder="예: 경유 (장비 연료)"></label>`;
+  $('#manualPicker').appendChild(nameRow);
+  mQty=qtyFields({unit:'L'}); $('#manualQty').replaceWith(mQty.el); mQty.el.id='manualQty';
+}
+$('#manualAdd').onclick=()=>{
+  const st=mPick.get(); const name=$('#mName').value.trim()||labelOf(st.cls,st.item,st.opt);
+  const meta = manualMeta && $('#mName').value.trim() ? {name, ...manualMeta} : {name, conf:'manual', basis:'직접선택'};
+  if(addRow(st, mQty.get(), meta)){ $('#mName').value=''; mQty.el.querySelector('.qc').value=''; manualMeta=null; }
+};
+function renderPresets(){
+  const q=$('#presetQ').value.trim().toLowerCase();
+  $('#presets').innerHTML=PRESETS.filter(p=>!q||p[0].toLowerCase().includes(q)).map((p,i)=>`<button data-i="${PRESETS.indexOf(p)}" title="${esc(labelOf(p[1],p[2],p[3]))}">${esc(p[0])}</button>`).join('')||'<span class="muted">목록에 없음 — 위에서 유별을 직접 선택하세요</span>';
+  $('#presets').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    manualMeta=null; const p=PRESETS[+b.dataset.i]; mPick.set({cls:p[1],item:p[2],opt:p[3]}); mQty.setUnit(TABLE[p[1]].unit); mQty.setSG(p[4]);
+    $('#mName').value=p[0]; mQty.el.querySelector('.qc').focus(); toast(`${p[0]} → ${labelOf(p[1],p[2],p[3])}`);
+  });
+}
+$('#presetQ').oninput=renderPresets;
+
+// ───────── 국가위험물정보 DB 검색 ─────────
+// GitHub Pages에서는 같은 폴더의 data/materials.json, 로컬 파일로 열면 아래 원격 주소에서 불러옴
+const DB_REMOTE = '';   // 예: 'https://아이디.github.io/hazmat-calc/data/materials.json'
+let DB=null, dbLoading=null;
+function loadDB(){
+  if(DB) return Promise.resolve(DB);
+  if(dbLoading) return dbLoading;
+  $('#dbInfo').innerHTML='<span class="spin"></span> 불러오는 중…';
+  const urls=['data/materials.json', DB_REMOTE].filter(Boolean);
+  dbLoading=(async()=>{
+    for(const u of urls){
+      try{ const r=await fetch(u,{cache:'no-cache'}); if(!r.ok) continue; const j=await r.json();
+        j._idx=j.items.map(i=>(i[0]+' '+i[1]).toLowerCase().replace(/\s+/g,''));
+        j._cls=j.classes.map(classFromString);
+        DB=j; $('#dbInfo').textContent=`${j.total.toLocaleString()}종 · ${j.updated} 기준`; return DB; }catch(e){}
+    }
+    $('#dbInfo').textContent='(불러오지 못함 — 인터넷 연결 또는 배포 주소 확인)'; dbLoading=null; return null;
+  })();
+  return dbLoading;
+}
+const SYN=[['크실렌','자일렌'],['메틸알코올','메탄올'],['에틸알코올','에탄올'],['이소프로필','아이소프로필'],['가솔린','휘발유'],['카바이드','탄화칼슘'],['신나','신너']];
+function dbSearch(q){
+  let k=q.toLowerCase().replace(/\s+/g,''); if(k.length<2) return [];
+  const keys=[k]; SYN.forEach(([a,b])=>{ if(k.includes(a)) keys.push(k.replace(a,b)); if(k.includes(b)) keys.push(k.replace(b,a)); });
+  const res=[];
+  DB._idx.forEach((s,i)=>{ let sc=-1;
+    for(const kk of keys){ const p=s.indexOf(kk); if(p<0) continue;
+      const nm=DB.items[i][0].toLowerCase().replace(/\s+/g,'');
+      const v = nm===kk?0 : DB.items[i][1]===q.trim()?0 : p===0?1 : 2;
+      sc = sc<0? v : Math.min(sc,v); }
+    if(sc>=0) res.push([sc, DB.items[i][0].length, i]); });
+  return res.sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);
+}
+function renderDB(){
+  const q=$('#dbQ').value.trim(); const box=$('#dbRes');
+  if(q.length<2){ box.innerHTML=''; return; }
+  if(!DB){ loadDB().then(d=>d&&renderDB()); return; }
+  const hits=dbSearch(q);
+  if(!hits.length){ box.innerHTML='<div class="more">검색 결과 없음 — 혼합물(제품)은 MSDS 업로드로 판정하세요</div>'; return; }
+  box.innerHTML=hits.slice(0,40).map(i=>{ const it=DB.items[i], c=DB._cls[it[3]];
+    const lab = c.notHazard? '비위험물' : (c.cls? `${labelOf(c.cls,c.item,c.opt)} · ${dqOf(c.cls,c.item,c.opt).toLocaleString()}${TABLE[c.cls].unit}` : DB.classes[it[3]]);
+    return `<div class="it ${c.notHazard?'nh':''}" data-i="${i}"><div><div class="nm">${esc(it[0])}</div><div class="cs">CAS ${esc(it[1]||'-')}${it[2]?' · UN '+esc(it[2]):''}</div></div><div class="cl">${esc(lab)}${c.warnings.length?' <span class="tag mid" title="'+esc(c.warnings.join('\n'))+'">확인</span>':''}</div></div>`; }).join('')
+    + (hits.length>40?`<div class="more">외 ${hits.length-40}건 — 검색어를 더 구체적으로 입력하세요</div>`:'');
+  box.querySelectorAll('.it').forEach(el=>el.onclick=()=>{
+    const it=DB.items[+el.dataset.i], c=DB._cls[it[3]];
+    if(c.notHazard){ toast(`${it[0]} — 위험물안전관리법 비위험물`); return; }
+    if(!c.cls){ toast('분류를 해석하지 못했습니다 — 유별을 직접 선택하세요'); return; }
+    mPick.set({cls:c.cls,item:c.item,opt:c.opt}); mQty.setUnit(TABLE[c.cls].unit);
+    $('#mName').value=it[0]; manualMeta={basis:'국가위험물DB', conf:'high', evidence:`${DB.classes[it[3]]} (CAS ${it[1]}) · 소방청 국가위험물정보 ${DB.updated}`, warnings:c.warnings};
+    mQty.el.querySelector('.qc').focus(); toast(`${it[0]} → ${labelOf(c.cls,c.item,c.opt)}`);
+  });
+}
+let dbT; $('#dbQ').oninput=()=>{ clearTimeout(dbT); dbT=setTimeout(renderDB,150); };
+$('#dbQ').onfocus=()=>loadDB();
+
+// ───────── 업로드 이벤트 ─────────
+const drop=$('#drop'), fileIn=$('#file');
+drop.onclick=()=>fileIn.click();
+fileIn.onchange=()=>{ handleFiles([...fileIn.files]); fileIn.value=''; };
+['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('on');}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('on');}));
+drop.addEventListener('drop',ev=>handleFiles([...ev.dataTransfer.files]));
+$('#pasteBtn').onclick=()=>{
+  const t=$('#paste').value; if(!t.trim()){ toast('내용을 붙여넣으세요'); return; }
+  const box=document.createElement('div'); box.className='pcard'; $('#parsed').prepend(box);
+  const r=classify(t,''); if($('#pasteName').value.trim()) r.product=$('#pasteName').value.trim(); if(!r.product) r.product='붙여넣은 MSDS';
+  showParsed(box, r, '붙여넣기');
+};
+
+// ───────── 결과 내보내기 ─────────
+function tableData(){
+  const head=['저장장소','제품/물질명','유별·품명','지정수량','단위','1개 용량','개수','입력단위','비중','환산량','배수','판정근거'];
+  const body=rows.map(r=>[r.loc,r.name,labelOf(r.cls,r.item,r.opt),r._dq,TABLE[r.cls].unit,r.cap,r.cnt,r.unit,r.sg??'',+r._v.toFixed(3),+r._x.toFixed(4),r.basis]);
+  const locs=locList(); const sums=locs.map(l=>['','',`[${l}] 배수 합계`,'','','','','','','',+rows.filter(r=>r.loc===l).reduce((s,r)=>s+r._x,0).toFixed(4),'']);
+  return [head,...body,...sums];
+}
+$('#copyBtn').onclick=async()=>{
+  if(!rows.length) return toast('복사할 내용이 없습니다');
+  const tsv=tableData().map(r=>r.join('\t')).join('\n');
+  try{ await navigator.clipboard.writeText(tsv); toast('복사됨 — 엑셀에 붙여넣기 하세요'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=tsv; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('복사됨');}catch(_){ toast('복사가 차단되었습니다'); } ta.remove(); }
+};
+$('#csvBtn').onclick=()=>{
+  if(!rows.length) return toast('저장할 내용이 없습니다');
+  const csv='﻿'+tableData().map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  try{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`위험물_지정수량_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); toast('CSV 저장 (저장이 안 되면 "표 복사"를 사용하세요)'); }
+  catch(e){ toast('이 화면에서는 파일 저장이 막혀 있습니다 — "표 복사"를 사용하세요'); }
+};
+$('#printBtn').onclick=()=>{ try{ window.print(); }catch(e){ toast('이 화면에서는 인쇄가 막혀 있습니다 — HTML 파일로 열어 인쇄하세요'); } };
+let clearArm=0;
+$('#clearBtn').onclick=()=>{ if(Date.now()-clearArm<3000){ rows=[]; render(); toast('전체 삭제됨'); clearArm=0; } else { clearArm=Date.now(); toast('한 번 더 누르면 전체 삭제됩니다'); } };
+$('#target').onchange=()=>{ target=parseFloat($('#target').value); render(); };
+
+// ───────── 별표1 표 ─────────
+function renderLaw(){
+  let h='<div class="tblwrap"><table class="law"><thead><tr><th>유별</th><th>성질</th><th>품명</th><th class="num">지정수량</th></tr></thead><tbody>';
+  for(const k in TABLE){ const T=TABLE[k]; T.items.forEach((it,i)=>{
+    h+=`<tr>${i===0?`<td rowspan="${T.items.length}"><b>${T.name}</b></td><td rowspan="${T.items.length}">${T.prop}</td>`:''}<td>${it.n}</td><td class="num">${it.opts?it.opts.map(o=>(it.ws||T.kind?o[0]+' ':'')+o[1].toLocaleString()+T.unit).join(' / '):it.q.toLocaleString()+T.unit}</td></tr>`; }); }
+  $('#lawTable').innerHTML=h+'</tbody></table></div>';
+}
+
+load();
+$('#siteName').value=meta.site||''; $('#writer').value=meta.writer||'';
+$('#siteName').oninput=()=>{ meta.site=$('#siteName').value; render(); };
+$('#writer').oninput=()=>{ meta.writer=$('#writer').value; render(); };
+initManual(); renderPresets(); renderLaw(); render();
+</script>
+</body>
+</html>
